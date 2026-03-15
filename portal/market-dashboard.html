@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Market Performance Dashboard</title>
+    <style>
+      body { font-family: 'Inter', system-ui, sans-serif; margin: 2rem; background: #0f172a; color: #e2e8f0; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+      th, td { border: 1px solid #1e293b; padding: 0.75rem; text-align: center; }
+      th { background: #1e293b; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.08em; }
+      tr:nth-child(even) { background: #111827; }
+      tr:nth-child(odd) { background: #0f172a; }
+      td:first-child { font-weight: 600; text-align: left; padding-left: 1rem; }
+      .timestamp { margin-top: 1rem; font-size: 0.9rem; color: #94a3b8; }
+      .refresh-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+      .refresh-btn { background: #38bdf8; border: none; color: #0f172a; padding: 0.6rem 1.4rem; border-radius: 999px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.35); transition: background 0.2s ease; }
+      .refresh-btn:hover { background: #0ea5e9; }
+      .refresh-btn:disabled { opacity: 0.65; cursor: not-allowed; box-shadow: none; }
+      .status { font-size: 0.9rem; color: #94a3b8; }
+      .positive { color: #22c55e; }
+      .negative { color: #f87171; }
+    </style>
+  </head>
+  <body>
+    <h1>Market Performance Dashboard</h1>
+    <p>Daily OHLCV data sourced via Yahoo Finance. Percentage changes compare the latest close with prior trading closes for each horizon. "ATH" shows performance relative to the all-time closing high.</p>
+    <div class="refresh-row">
+      <button class="refresh-btn" id="refresh-btn" type="button">↻ Refresh data</button>
+      <p class="status" id="status-message">Loaded cached data.</p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>1D</th>
+          <th>3D</th>
+          <th>5D</th>
+          <th>1MO</th>
+          <th>1Y</th>
+          <th>ATH</th>
+          <th>PRE-MARKET</th>
+          <th>AFTER-HOURS</th>
+        </tr>
+      </thead>
+      <tbody id="market-table-body"></tbody>
+    </table>
+    <p class="timestamp" id="timestamp"></p>
+
+    <script>
+      const TICKERS = ["NVDA", "SOXL", "NVDL", "TSLA"];
+      const PERFORMANCE_ORDER = ["1d", "3d", "5d", "1mo", "1y", "ath"];
+      let currentData = {"NVDA": {"symbol": "NVDA", "last_updated": "2026-03-15T20:25:05.170911+00:00", "records": 6827, "latest_close": 180.25, "performance": {"1d": -0.015780274103308733, "3d": -0.024462868257532522, "5d": 0.013665462690880759, "1mo": -0.051565392761866446, "1y": 0.5573699959124006, "ath": -0.12939525770322347}, "session": {"pre_market": null, "after_hours": -0.00028737864077665876}}, "SOXL": {"symbol": "SOXL", "last_updated": "2026-03-15T20:25:05.705433+00:00", "records": 4027, "latest_close": 50.720001220703125, "performance": {"1d": 0.008751043199854314, "3d": -0.070892085016807, "5d": 0.05909379551310656, "1mo": -0.2546657024816552, "1y": 1.7715848817079003, "ath": -0.30511025201880015}, "session": {"pre_market": null, "after_hours": -0.005719661153807398}}, "NVDL": {"symbol": "NVDL", "last_updated": "2026-03-15T20:25:06.141129+00:00", "records": 814, "latest_close": 78.58000183105469, "performance": {"1d": -0.031430981248502965, "3d": -0.04935883922450057, "5d": 0.025313184457935733, "1mo": -0.1178715736884901, "1y": 0.8248954789814706, "ath": -0.3045401954445782}, "session": {"pre_market": null, "after_hours": 0.0008907885888804756}}, "TSLA": {"symbol": "TSLA", "last_updated": "2026-03-15T20:25:06.674437+00:00", "records": 3951, "latest_close": 391.20001220703125, "performance": {"1d": -0.009645319015724074, "3d": -0.020138208155510262, "5d": -0.013938947460890305, "1mo": -0.08655749353816433, "1y": 0.5768471844154062, "ath": -0.20143706967461783}, "session": {"pre_market": null, "after_hours": -0.0035787631987350688}}};
+
+      const tableBody = document.getElementById('market-table-body');
+      const statusMessage = document.getElementById('status-message');
+      const timestampEl = document.getElementById('timestamp');
+      const refreshBtn = document.getElementById('refresh-btn');
+
+      function formatPercent(value) {
+        if (value === null || value === undefined || Number.isNaN(value)) return 'N/A';
+        return `${(value * 100).toFixed(2)}%`;
+      }
+
+      function wrapTrend(value) {
+        if (value === null || value === undefined || Number.isNaN(value)) return '<td>N/A</td>';
+        const trendClass = value > 0 ? 'positive' : value < 0 ? 'negative' : '';
+        return `<td><span class="${trendClass}">${formatPercent(value)}</span></td>`;
+      }
+
+      function renderTable(data) {
+        let rows = '';
+        TICKERS.forEach((symbol) => {
+          const summary = data[symbol];
+          if (!summary) return;
+          const perf = summary.performance || {};
+          const session = summary.session || {};
+          const perfCells = PERFORMANCE_ORDER.map((window) => wrapTrend(perf[window] ?? null)).join('');
+          const pre = wrapTrend(session.pre_market ?? null);
+          const after = wrapTrend(session.after_hours ?? null);
+          rows += `<tr><td>${symbol}</td>${perfCells}${pre}${after}</tr>`;
+        });
+        tableBody.innerHTML = rows;
+        updateTimestamp(data);
+      }
+
+      function updateTimestamp(data) {
+        const sourceSymbol = TICKERS.find((symbol) => data[symbol]);
+        if (!sourceSymbol) {
+          timestampEl.textContent = 'No timestamp available.';
+          return;
+        }
+        const iso = data[sourceSymbol].last_updated;
+        if (!iso) {
+          timestampEl.textContent = 'No timestamp available.';
+          return;
+        }
+        const date = new Date(iso);
+        timestampEl.textContent = `Last updated: ${date.toLocaleString()} (${date.toUTCString()})`;
+      }
+
+      async function refreshData() {
+        refreshBtn.disabled = true;
+        statusMessage.textContent = 'Fetching latest data…';
+        try {
+          const response = await fetch('market_summary.json?ts=' + Date.now(), { cache: 'no-store' });
+          if (!response.ok) throw new Error('Failed to load market_summary.json');
+          currentData = await response.json();
+          renderTable(currentData);
+          statusMessage.textContent = 'Data refreshed successfully.';
+        } catch (error) {
+          console.error(error);
+          statusMessage.textContent = 'Unable to refresh data. Check the server logs or rerun nvda_tool.py.';
+        } finally {
+          refreshBtn.disabled = false;
+        }
+      }
+
+      refreshBtn.addEventListener('click', refreshData);
+      renderTable(currentData);
+    </script>
+  </body>
+</html>
