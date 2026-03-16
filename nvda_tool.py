@@ -20,7 +20,13 @@ AFTER_HOURS_START = time(16, 0)
 PRE_MARKET_START = time(7, 0)
 REGULAR_OPEN = time(9, 30)
 
-TICKERS: List[str] = ["NVDA", "SOXL", "NVDL", "TSLA"]
+TICKERS: List[str] = ["NVDA", "SOXL", "NVDL", "TSLA", "TSLL",  "AAOI", "AXTI", "LITE", "TSEM",
+    "RKLB", "ASTS",
+    "IREN", "NBIS", "CIFR",
+    "MU", "SNDK",
+    "ONDS", "AVAV", "KTOS",
+    "KRKNF", "SYM", "TSLA",
+    "BE", "OKLO", "SMR"]
 
 PERFORMANCE_WINDOWS = {
     "1d": 1,
