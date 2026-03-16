@@ -1,0 +1,14 @@
+# Python build / cache
+__pycache__/
+*.pyc
+
+# Virtual env
+.venv/
+
+# Local OpenClaw working files (optional)
+.openclaw/
+
+# Generated data/artifacts
+data/
+output/
+portal/market_summary.json
